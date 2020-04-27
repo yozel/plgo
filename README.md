@@ -12,7 +12,7 @@ contribution of all kind welcome!
 
 ## installation
 
-`go get -u github.com/microo8/plgo/plgo`
+`go get -u gitlab.com/microo8/plgo/plgo`
 
 ## write functions
 
@@ -29,7 +29,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/microo8/plgo"
+	"gitlab.com/microo8/plgo"
 )
 
 //from every exported function will be generated a stored procedure

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/microo8/plgo"
+	"gitlab.com/microo8/plgo"
 )
 
 //PLGoTest testing function
