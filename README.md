@@ -1,4 +1,4 @@
-[![Report card](http://goreportcard.com/badge/microo8/plgo)](http://goreportcard.com/report/microo8/plgo)
+[![Report card](https://goreportcard.com/badge/gitlab.com/microo8/plgo)](https://goreportcard.com/report/gitlab.com/microo8/plgo)
 [![MIT Licence](https://badges.frapsoft.com/os/mit/mit.png?v=103)](https://opensource.org/licenses/mit-license.php)
 
 # plgo
