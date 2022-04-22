@@ -16,7 +16,7 @@ func printUsage() {
 }
 
 func buildPackage(buildPath, packageName string) error {
-	if err := os.Setenv("CGO_LDFLAGS_ALLOW", "-shared"); err != nil {
+	if err := os.Setenv("CGO_LDFLAGS_ALLOW", "-shared|-undefined|dynamic_lookup"); err != nil {
 		return err
 	}
 	switchx := "-v" // substitutor

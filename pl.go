@@ -3,6 +3,7 @@ package plgo
 /*
 #cgo CFLAGS: -I"/usr/include/postgresql/server" -fpic
 #cgo LDFLAGS: -shared
+#cgo darwin LDFLAGS: -undefined dynamic_lookup
 //{windowsCFLAGS}
 
 typedef unsigned int uint;
