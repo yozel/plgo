@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"io"
+	"regexp"
 	"strings"
 )
 
@@ -13,43 +14,54 @@ const (
 )
 
 var datumTypes = map[string]string{
-	"error":       "text",
-	"string":      "text",
-	"[]byte":      "bytea",
-	"int16":       "smallint",
-	"uint16":      "smallint",
-	"int32":       "integer",
-	"uint32":      "integer",
-	"int64":       "bigint",
-	"int":         "bigint",
-	"uint":        "bigint",
-	"float32":     "real",
-	"float64":     "double precision",
-	"time.Time":   "timestamp with timezone",
-	"bool":        "boolean",
-	"[]string":    "text[]",
-	"[]int16":     "smallint[]",
-	"[]uint16":    "smallint[]",
-	"[]int32":     "integer[]",
-	"[]uint32":    "integer[]",
-	"[]int64":     "bigint[]",
-	"[]int":       "bigint[]",
-	"[]uint":      "bigint[]",
-	"[]float32":   "real[]",
-	"[]float64":   "double precision[]",
-	"[]bool":      "boolean[]",
-	"[]time.Time": "timestamp with timezone[]",
-	"TriggerRow":  "trigger",
+	"error":           "text",
+	"string":          "text",
+	`[]byte`:          "bytea",
+	"json.RawMessage": "jsonb",
+	"int16":           "smallint",
+	"uint16":          "smallint",
+	"int32":           "integer",
+	"uint32":          "integer",
+	"int64":           "bigint",
+	"int":             "bigint",
+	"uint":            "bigint",
+	"float32":         "real",
+	"float64":         "double precision",
+	"time.Time":       "timestamp with timezone",
+	"bool":            "boolean",
+	"[]string":        "text[]",
+	"[]int16":         "smallint[]",
+	"[]uint16":        "smallint[]",
+	"[]int32":         "integer[]",
+	"[]uint32":        "integer[]",
+	"[]int64":         "bigint[]",
+	"[]int":           "bigint[]",
+	"[]uint":          "bigint[]",
+	"[]float32":       "real[]",
+	"[]float64":       "double precision[]",
+	"[]bool":          "boolean[]",
+	"[]time.Time":     "timestamp with timezone[]",
+	"TriggerRow":      "trigger",
 }
 
-//CodeWriter is an interface of an object that can print its code
+func getDatumTypes(t string) (string, error) {
+	for k, v := range datumTypes {
+		re := regexp.MustCompile(k)
+		if re.MatchString(t) {
+			return v, nil
+		}
+	}
+	return "", fmt.Errorf("Type %s not supported", t)
+}
+
+// CodeWriter is an interface of an object that can print its code
 type CodeWriter interface {
 	FuncDec() string
 	Code(w io.Writer)
 	SQL(packageName string, w io.Writer)
 }
 
-//NewCode parses the ast.FuncDecl and returns a new Function or An TriggerFunction
+// NewCode parses the ast.FuncDecl and returns a new Function or An TriggerFunction
 func NewCode(function *ast.FuncDecl) (CodeWriter, error) {
 	params, err := getParamList(function)
 	if err != nil {
@@ -91,7 +103,11 @@ func getParamList(function *ast.FuncDecl) (Params []Param, err error) {
 				if _, ok := datumTypes["[]"+arrayType.Name]; !ok {
 					return nil, fmt.Errorf("Function %s, parameter %s: array type not supported", function.Name.Name, paramName.Name)
 				}
-				Params = append(Params, Param{Name: paramName.Name, Type: "[]" + arrayType.Name})
+				lenStr := ""
+				if paramType.Len != nil {
+					lenStr = paramType.Len.(*ast.BasicLit).Value
+				}
+				Params = append(Params, Param{Name: paramName.Name, Type: "[" + lenStr + "]" + arrayType.Name})
 			case *ast.StarExpr:
 				//*plgo.TriggerData
 				selector, ok := paramType.X.(*ast.SelectorExpr)
@@ -154,7 +170,7 @@ func getReturnType(functionName string, results *ast.FieldList) (string, bool, e
 		return "TriggerRow", false, nil
 	case *ast.Ident:
 		if _, ok := datumTypes[res.Name]; !ok {
-			return "", false, fmt.Errorf("Function %s has not suported return type", functionName)
+			return "", false, fmt.Errorf("Function %s with type has not suported return type", functionName)
 		}
 		return res.Name, false, nil
 	case *ast.ArrayType:
@@ -163,29 +179,38 @@ func getReturnType(functionName string, results *ast.FieldList) (string, bool, e
 			return "", false, fmt.Errorf("Function %s has not supported return type", functionName)
 		}
 		return "[]" + ident.Name, false, nil
+	case *ast.SelectorExpr:
+		pkg, ok := res.X.(*ast.Ident)
+		if !ok {
+			return "", false, fmt.Errorf("Function %s has not suported return type", functionName)
+		}
+		if _, ok := datumTypes[fmt.Sprintf("%s.%s", pkg.Name, res.Sel.Name)]; !ok {
+			return "", false, fmt.Errorf("Function %s has not suported return type %s.%s", functionName, pkg.Name, res.Sel)
+		}
+		return fmt.Sprintf("%s.%s", pkg.Name, res.Sel.Name), false, nil
 	default:
 		return "", false, fmt.Errorf("Function %s has not suported return type", functionName)
 	}
 }
 
-//Param the parameters of the functions
+// Param the parameters of the functions
 type Param struct {
 	Name, Type string
 }
 
-//VoidFunction is an function with no return type
+// VoidFunction is an function with no return type
 type VoidFunction struct {
 	Name   string
 	Params []Param
 	Doc    string
 }
 
-//FuncDec returns the PG INFO_V1 macro
+// FuncDec returns the PG INFO_V1 macro
 func (f *VoidFunction) FuncDec() string {
 	return "PG_FUNCTION_INFO_V1(" + f.Name + ");"
 }
 
-//Code writes the wrapper function
+// Code writes the wrapper function
 func (f *VoidFunction) Code(w io.Writer) {
 	w.Write([]byte("//export " + f.Name + "\nfunc " + f.Name + "(fcinfo *funcInfo) Datum {\n"))
 	if len(f.Params) > 0 {
@@ -207,7 +232,7 @@ func (f *VoidFunction) Code(w io.Writer) {
 	w.Write([]byte("}\n"))
 }
 
-//SQL writes the SQL command that creates the function in DB
+// SQL writes the SQL command that creates the function in DB
 func (f *VoidFunction) SQL(packageName string, w io.Writer) {
 	w.Write([]byte("CREATE OR REPLACE FUNCTION " + f.Name + "("))
 	var paramStrings []string
@@ -226,7 +251,7 @@ func (f *VoidFunction) SQL(packageName string, w io.Writer) {
 	f.Comment(w)
 }
 
-//Comment writes the Doc comment of the golang function as an DB comment for that function
+// Comment writes the Doc comment of the golang function as an DB comment for that function
 func (f *VoidFunction) Comment(w io.Writer) {
 	var paramTypes []string
 	for _, p := range f.Params {
@@ -235,14 +260,14 @@ func (f *VoidFunction) Comment(w io.Writer) {
 	w.Write([]byte("COMMENT ON FUNCTION " + f.Name + "(" + strings.Join(paramTypes, ",") + ") IS '" + f.Doc + "';\n\n"))
 }
 
-//Function is a list of parameters and the return type
+// Function is a list of parameters and the return type
 type Function struct {
 	VoidFunction
 	ReturnType string
 	IsStar     bool
 }
 
-//Code writes the wrapper function
+// Code writes the wrapper function
 func (f *Function) Code(w io.Writer) {
 	w.Write([]byte("//export " + f.Name + "\nfunc " + f.Name + "(fcinfo *funcInfo) Datum {\n"))
 	if len(f.Params) > 0 {
@@ -283,7 +308,7 @@ func (f *Function) Code(w io.Writer) {
 
 }
 
-//SQL writes the SQL command that creates the function in DB
+// SQL writes the SQL command that creates the function in DB
 func (f *Function) SQL(packageName string, w io.Writer) {
 	w.Write([]byte("CREATE OR REPLACE FUNCTION " + f.Name + "("))
 	var paramsString []string
@@ -309,12 +334,12 @@ func (f *Function) SQL(packageName string, w io.Writer) {
 	f.Comment(w)
 }
 
-//TriggerFunction a special type of function, it takes TriggerData as the first argument and TriggerRow as return type
+// TriggerFunction a special type of function, it takes TriggerData as the first argument and TriggerRow as return type
 type TriggerFunction struct {
 	VoidFunction
 }
 
-//Code writes the wrapper function
+// Code writes the wrapper function
 func (f *TriggerFunction) Code(w io.Writer) {
 	w.Write([]byte("//export " + f.Name + "\nfunc " + f.Name + "(fcinfo *funcInfo) Datum {\n"))
 	if len(f.Params) > 0 {
@@ -338,7 +363,7 @@ func (f *TriggerFunction) Code(w io.Writer) {
 	w.Write([]byte("}\n"))
 }
 
-//SQL writes the SQL command that creates the function in DB
+// SQL writes the SQL command that creates the function in DB
 func (f *TriggerFunction) SQL(packageName string, w io.Writer) {
 	w.Write([]byte("CREATE OR REPLACE FUNCTION " + f.Name + "("))
 	var paramsString []string

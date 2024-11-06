@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/format"
 	"go/parser"
 	"go/token"
@@ -15,12 +15,15 @@ import (
 	"strings"
 )
 
-//ToUnexported changes Exported function name to unexported
+//go:embed plgo/pl.go
+var plgoContent []byte
+
+// ToUnexported changes Exported function name to unexported
 func ToUnexported(name string) string {
 	return strings.ToLower(name[0:1]) + name[1:]
 }
 
-//ModuleWriter writes the tmp module wrapper that will be build to shared object
+// ModuleWriter writes the tmp module wrapper that will be build to shared object
 type ModuleWriter struct {
 	PackageName string
 	Doc         string
@@ -29,7 +32,7 @@ type ModuleWriter struct {
 	functions   []CodeWriter
 }
 
-//NewModuleWriter parses the go package and returns the FileSet and AST
+// NewModuleWriter parses the go package and returns the FileSet and AST
 func NewModuleWriter(packagePath string) (*ModuleWriter, error) {
 	fset := token.NewFileSet()
 	// skip _test files in current package
@@ -69,7 +72,7 @@ func NewModuleWriter(packagePath string) (*ModuleWriter, error) {
 	return &ModuleWriter{PackageName: packageName, Doc: packageDoc, fset: fset, packageAst: packageAst, functions: funcVisitor.functions}, nil
 }
 
-//WriteModule writes the tmp module wrapper
+// WriteModule writes the tmp module wrapper
 func (mw *ModuleWriter) WriteModule() (string, error) {
 	tempPackagePath, err := buildPath()
 	if err != nil {
@@ -106,37 +109,15 @@ func (mw *ModuleWriter) writeUserPackage(tempPackagePath string) error {
 	return nil
 }
 
-func readPlGoSource() ([]byte, error) {
-	goPath := os.Getenv("GOPATH")
-	if goPath == "" {
-		goPath = build.Default.GOPATH // Go 1.8 and later have a default GOPATH
-	}
-	for _, goPathElement := range filepath.SplitList(goPath) {
-		rv, err := ioutil.ReadFile(filepath.Join(goPathElement, "src", "gitlab.com", "microo8", "plgo", "pl.go"))
-		if err == nil {
-			return rv, nil
-		} else if os.IsNotExist(err) {
-			continue // try the next
-		} else {
-			return nil, fmt.Errorf("Cannot read plgo package: %w", err)
-		}
-	}
-	return nil, fmt.Errorf("Package gitlab.com/microo8/plgo not installed\nplease install it with: go get -u gitlab.com/microo8/plgo/plgo")
-}
-
 func (mw *ModuleWriter) writeplgo(tempPackagePath string) error {
-	plgoSourceBin, err := readPlGoSource()
-	if err != nil {
-		return err
-	}
-	plgoSource := string(plgoSourceBin)
+	plgoSource := string(plgoContent)
 	plgoSource = "package main\n\n" + plgoSource[12:]
 	postgresIncludeDir, err := exec.Command("pg_config", "--includedir-server").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("Cannot run pg_config: %w", err)
 	}
 	postgresIncludeStr := getcorrectpath(string(postgresIncludeDir)) // corrects 8.3 filenames on windows
-	plgoSource = strings.Replace(plgoSource, "/usr/include/postgresql/server", postgresIncludeStr, 1)
+	plgoSource = strings.Replace(plgoSource, "/usr/include/postgresql/17/server", postgresIncludeStr, 1)
 
 	addOtherIncludesAndLDFLAGS(&plgoSource, postgresIncludeStr) // on mingw windows workarounds
 
@@ -182,7 +163,7 @@ import "C"
 	return nil
 }
 
-//WriteSQL writes sql file with commands to create functions in DB
+// WriteSQL writes sql file with commands to create functions in DB
 func (mw *ModuleWriter) WriteSQL(tempPackagePath string) error {
 	sqlPath := filepath.Join(tempPackagePath, mw.PackageName+"--0.1.sql")
 	sqlFile, err := os.Create(sqlPath)
@@ -199,7 +180,7 @@ func (mw *ModuleWriter) WriteSQL(tempPackagePath string) error {
 	return nil
 }
 
-//WriteControl writes .control file for the new postgresql extension
+// WriteControl writes .control file for the new postgresql extension
 func (mw *ModuleWriter) WriteControl(path string) error {
 	control := []byte(`# ` + mw.PackageName + ` extension
 comment = '` + mw.PackageName + ` extension'
@@ -209,7 +190,7 @@ relocatable = true`)
 	return ioutil.WriteFile(controlPath, control, 0644)
 }
 
-//WriteMakefile writes .control file for the new postgresql extension
+// WriteMakefile writes .control file for the new postgresql extension
 func (mw *ModuleWriter) WriteMakefile(path string) error {
 	makefile := []byte(`EXTENSION = ` + mw.PackageName + `
 DATA = ` + mw.PackageName + `--0.1.sql  # script files to install

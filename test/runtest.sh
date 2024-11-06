@@ -1,1 +1,14 @@
-cd ../plgo && go install && cd ../test && plgo && cd build && sudo make install with_llvm=no && cd .. && psql -U root -c "drop extension if exists test" postgres && psql -U root -c "create extension test" postgres && psql -U root -c "select plgotest()" postgres
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+cd ../plgo
+go build -o $(go env GOPATH)/bin/plgo .
+cd ../test
+plgo
+cd build
+sudo make install with_llvm=no
+cd ..
+sudo -u postgres psql -c "drop extension if exists test" postgres
+sudo -u postgres psql -c "create extension test" postgres
+sudo -u postgres psql -c "select plgotest()" postgres
+

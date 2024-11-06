@@ -6,16 +6,16 @@ import (
 	"log"
 	"strings"
 
-	"gitlab.com/microo8/plgo"
+	"github.com/yozel/plgo/plgo/plgo"
 )
 
-//Meh prints out message to error elog
+// Meh prints out message to error elog
 func Meh() {
 	logger := plgo.NewErrorLogger("", log.Ltime|log.Lshortfile)
 	logger.Println("meh")
 }
 
-//ConcatAll concatenates all values of an column in a given table
+// ConcatAll concatenates all values of an column in a given table
 func ConcatAll(tableName, colName string) string {
 	logger := plgo.NewErrorLogger("", log.Ltime|log.Lshortfile)
 	db, err := plgo.Open()
@@ -49,7 +49,7 @@ func ConcatAll(tableName, colName string) string {
 	return ret
 }
 
-//CreatedTimeTrigger example trigger
+// CreatedTimeTrigger example trigger
 func CreatedTimeTrigger(td *plgo.TriggerData) *plgo.TriggerRow {
 	var id int
 	var value string
@@ -59,7 +59,7 @@ func CreatedTimeTrigger(td *plgo.TriggerData) *plgo.TriggerRow {
 	return td.NewRow
 }
 
-//ConcatArray concatenates an array of strings
+// ConcatArray concatenates an array of strings
 func ConcatArray(strs []string) string {
 	return strings.Join(strs, "")
 }

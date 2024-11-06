@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/microo8/plgo"
+	"github.com/yozel/plgo/plgo/plgo"
 )
 
-//PLGoTest testing function
+// PLGoTest testing function
 func PLGoTest() {
 	t := plgo.NewNoticeLogger("", log.Ltime|log.Lshortfile)
 	defer t.Println("TEST end")
@@ -27,7 +27,7 @@ func PLGoTest() {
 	testQueryOutputArrayInt(plgo.NewNoticeLogger("testQueryOutputArrayInt", log.Ltime|log.Lshortfile))
 	testQueryOutputArrayFloat(plgo.NewNoticeLogger("testQueryOutputArrayFloat", log.Ltime|log.Lshortfile))
 	testJSON(plgo.NewNoticeLogger("testJSON", log.Ltime|log.Lshortfile))
-	//testGoroutines(plgo.NewNoticeLogger("testGoroutines", log.Ltime|log.Lshortfile))
+	// testGoroutines(plgo.NewNoticeLogger("testGoroutines", log.Ltime|log.Lshortfile))
 	testFunctionByteaOutput(plgo.NewNoticeLogger("testFunctionByteaOutput", log.Ltime|log.Lshortfile))
 }
 

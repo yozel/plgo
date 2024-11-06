@@ -1,7 +1,7 @@
 package main
 
 /*
-#cgo CFLAGS: -I/usr/include/postgresql/server
+#cgo CFLAGS: -I/usr/include/postgresql/17/server
 #cgo LDFLAGS: -shared
 
 #include "postgres.h"

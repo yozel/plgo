@@ -4,13 +4,13 @@ import "go/ast"
 
 const plgo = "plgo"
 
-//FuncVisitor collects all definitions of exported functions in an packate
+// FuncVisitor collects all definitions of exported functions in an packate
 type FuncVisitor struct {
 	err       error
 	functions []CodeWriter
 }
 
-//Visit checks if the functions is exported and creates and Code object from it
+// Visit checks if the functions is exported and creates and Code object from it
 func (v *FuncVisitor) Visit(node ast.Node) ast.Visitor {
 	function, ok := node.(*ast.FuncDecl)
 	if !ok || !ast.IsExported(function.Name.Name) {
@@ -26,14 +26,14 @@ func (v *FuncVisitor) Visit(node ast.Node) ast.Visitor {
 	return v
 }
 
-//Remover is an visitor that removes all plgo usages
+// Remover is an visitor that removes all plgo usages
 type Remover struct{}
 
-//Visit removes plgo selectors and plgo import
+// Visit removes plgo selectors and plgo import
 func (v *Remover) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.ImportSpec:
-		if n.Path.Value == "\"gitlab.com/microo8/plgo\"" {
+		if n.Path.Value == "\"github.com/yozel/plgo/plgo/plgo\"" {
 			n.Path.Value = ""
 		}
 	case *ast.CallExpr:
