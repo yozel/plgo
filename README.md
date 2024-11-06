@@ -10,10 +10,6 @@ contribution of all kind welcome!
 
 `sudo apt-get install postgresql-server-dev-X.Y  #Replace X.Y with your version of Postgres`
 
-## installation
-
-`go get -u gitlab.com/microo8/plgo/plgo`
-
 ## write functions
 
 Creating new stored procedures with plgo is easy:
@@ -86,7 +82,7 @@ func ConcatArray(strs []string) string {
 
 ## create extension
 
-build the PostgreSQL extension with `$ plgo [path/to/package]`
+build the PostgreSQL extension with `$ go run github.com/yozel/plgo [path/to/package]`
 
 this will create an directory named `build`, where the compiled shared object will be and also all files needed for the extension installation (like `Makefile`, `extention.sql`, ...)
 
